@@ -235,6 +235,7 @@ void WebGateway::setupRoutes() {
                     p["log_rows"] = Logger.getPackRows(i);
 
                     JsonObject parsed = p.createNestedObject("parsed");
+                    parsed["is_huawei"] = _packs[i].isHuawei;
                     parsed["voltage"] = _packs[i].voltage;
                     parsed["current"] = _packs[i].current;
                     parsed["soc"] = _packs[i].soc;
@@ -251,9 +252,9 @@ void WebGateway::setupRoutes() {
                     parsed["error_code"] = _packs[i].errorRaw;
                     parsed["balance"] = _packs[i].balanceMask;
                     parsed["cell_num"] = CELLS_PER_BATTERY;
-                    parsed["model"] = "Vision V-LFP48100";
+                    parsed["model"] = _packs[i].isHuawei ? "Huawei ESM-48100B1" : "Generic 15S LFP";
                     parsed["fw_version"] = "v2.01";
-                    parsed["serial"] = "VS-2024-LFP";
+                    parsed["serial"] = _packs[i].isHuawei ? "HW-ESM-48100" : "VS-2024-LFP";
                     parsed["cell_min"] = _packs[i].cellMin;
                     parsed["cell_max"] = _packs[i].cellMax;
                     parsed["cell_diff"] = _packs[i].cellDiff;
