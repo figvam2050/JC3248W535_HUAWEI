@@ -1,0 +1,37 @@
+# PlatformIO
+.pio
+.pioenvs
+.piolibdeps
+
+# IDE and Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS / OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+
+# Large SD Card dump (music, videos, full assets >280MB)
+sd_backup/
+
+# Logs directory (recorded from device or web sessions)
+logs/
+*.csv
+
+# Backup binaries (uncomment if you don't want to track 16MB firmware binary in git)
+# backup/*.bin
+compile_commands.json
+.cache/
