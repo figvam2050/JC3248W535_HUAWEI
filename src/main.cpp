@@ -328,37 +328,74 @@ static void set_backlight_brightness(uint8_t brightness) {
 
 static String decodeAlarmString(const BatteryPack &p) {
     String res = "";
-    uint16_t w = p.warningRaw;
-    uint16_t pr = p.protectionRaw;
-    uint16_t err = p.errorRaw;
 
-    if (pr & 0x0001) res += "Pack OV Prot | ";
-    else if (w & 0x0001) res += "Pack OV Warn | ";
+    if (p.isHuawei) {
+        // Huawei ESM specific alarm decode based on COMBOX_HUAWEI registers:
+        // huaweiAlarm[0]: 0x0046 (System faults)
+        // huaweiAlarm[2]: 0x0048 (Protection)
+        // huaweiAlarm[3]: 0x0049 (Warning)
+        // huaweiAlarm[4]: 0x004A (Module status)
+        uint16_t sysf = p.huaweiAlarm[0];
+        uint16_t prot = p.huaweiAlarm[2];
+        uint16_t warn = p.huaweiAlarm[3];
+        uint16_t modst = p.huaweiAlarm[4];
 
-    if (pr & 0x0002) res += "Cell OV Prot | ";
-    else if (w & 0x0002) res += "Cell OV Warn | ";
+        // Protection (0x0048)
+        if (prot & (1 << 5)) res += "Cell OV Prot | ";
+        if (prot & (1 << 4)) res += "Pack OV Prot | ";
+        if (prot & (1 << 7)) res += "Cell UV Prot | ";
+        if (prot & (1 << 6)) res += "Pack UV Prot | ";
+        if (prot & ((1 << 1) | (1 << 3) | (1 << 9))) res += "OverTemp Prot | ";
+        if (prot & ((1 << 0) | (1 << 2))) res += "UnderTemp Prot | ";
+        if (prot & (1 << 8)) res += "Charge OC Prot | ";
+        if (prot & (1 << 10)) res += "Discharge OC Prot | ";
 
-    if (pr & 0x0004) res += "Pack UV Prot | ";
-    else if (w & 0x0004) res += "Pack UV Warn | ";
+        // Warning (0x0049)
+        if (warn & (1 << 5)) res += "Cell OV Warn | ";
+        if (warn & (1 << 4)) res += "Pack OV Warn | ";
+        if (warn & (1 << 7)) res += "Cell UV Warn | ";
+        if (warn & (1 << 6)) res += "Pack UV Warn | ";
+        if (warn & ((1 << 1) | (1 << 3))) res += "OverTemp Warn | ";
+        if (warn & ((1 << 0) | (1 << 2))) res += "UnderTemp Warn | ";
+        if (warn & (1 << 8)) res += "Charge OC Warn | ";
 
-    if (pr & 0x0008) res += "Cell UV Prot | ";
-    else if (w & 0x0008) res += "Cell UV Warn | ";
+        // System fault & module status (0x0046, 0x004A)
+        if (sysf & 0x7E) res += "Sys Fault | ";
+        if (modst & 0x0001) res += "BMS Shutdown | ";
+        if (modst & 0x0002) res += "Lithium Fault | ";
+    } else {
+        uint16_t w = p.warningRaw;
+        uint16_t pr = p.protectionRaw;
+        uint16_t err = p.errorRaw;
 
-    if (pr & 0x0010) res += "Charge OC Prot | ";
-    else if (w & 0x0010) res += "Charge OC Warn | ";
+        if (pr & 0x0001) res += "Pack OV Prot | ";
+        else if (w & 0x0001) res += "Pack OV Warn | ";
 
-    if (pr & 0x0020) res += "Discharge OC Prot | ";
-    else if (w & 0x0020) res += "Discharge OC Warn | ";
+        if (pr & 0x0002) res += "Cell OV Prot | ";
+        else if (w & 0x0002) res += "Cell OV Warn | ";
 
-    if (w & 0x0040) res += "Temp Anomaly | ";
-    if (w & 0x0080) res += "MOS OverTemp | ";
-    if (w & 0x0100) res += "Charge OverTemp | ";
-    if (w & 0x0200) res += "Discharge OverTemp | ";
-    if (w & 0x0400) res += "Charge UnderTemp | ";
+        if (pr & 0x0004) res += "Pack UV Prot | ";
+        else if (w & 0x0004) res += "Pack UV Warn | ";
 
-    if (err & 0x0001) res += "Voltage Error | ";
-    if (err & 0x0002) res += "Temp Error | ";
-    if (err & 0x0010) res += "Cell Unbalance | ";
+        if (pr & 0x0008) res += "Cell UV Prot | ";
+        else if (w & 0x0008) res += "Cell UV Warn | ";
+
+        if (pr & 0x0010) res += "Charge OC Prot | ";
+        else if (w & 0x0010) res += "Charge OC Warn | ";
+
+        if (pr & 0x0020) res += "Discharge OC Prot | ";
+        else if (w & 0x0020) res += "Discharge OC Warn | ";
+
+        if (w & 0x0040) res += "Temp Anomaly | ";
+        if (w & 0x0080) res += "MOS OverTemp | ";
+        if (w & 0x0100) res += "Charge OverTemp | ";
+        if (w & 0x0200) res += "Discharge OverTemp | ";
+        if (w & 0x0400) res += "Charge UnderTemp | ";
+
+        if (err & 0x0001) res += "Voltage Error | ";
+        if (err & 0x0002) res += "Temp Error | ";
+        if (err & 0x0010) res += "Cell Unbalance | ";
+    }
 
     if (res.length() > 3) res.remove(res.length() - 3);
     return res;

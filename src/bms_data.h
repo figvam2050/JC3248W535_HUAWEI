@@ -34,6 +34,8 @@ struct BatteryPack {
     uint16_t errorRaw = 0;
     uint32_t balanceMask = 0;      // Bit 0..14 active balancing
     uint32_t cycles = 0;
+    bool isHuawei = false;         // True if Huawei ESM detected on RS485
+    uint16_t huaweiAlarm[5] = {0}; // Raw Huawei alarms: 0x0046..0x004A
 };
 
 struct BankSummary {
