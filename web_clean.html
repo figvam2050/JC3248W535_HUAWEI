@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="uk"><head><meta charset="utf-8">
-<title>Vision BMS Multi-Pack Monitor & Diagnostics</title>
+<title>Huawei ESM BMS Multi-Pack Monitor & Diagnostics</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{--bg:#111417;--card:#1a1f24;--card-hi:#232a31;--fg:#d8dee4;--dim:#7d8894;--ok:#3fb950;
@@ -149,7 +149,7 @@ canvas{width:100%;height:auto;display:block}
 </style></head><body>
 
 <header>
-  <h1>Vision BMS Multi-Pack Monitor <span id="conn" class="pill">…</span> <span id="wifi_rssi" class="pill" style="font-size:11px;background:#21262d;color:#8b949e" title="Рівень сигналу Wi-Fi">📶 ...</span></h1>
+  <h1>Huawei ESM Multi-Pack Monitor <span id="conn" class="pill">…</span> <span id="wifi_rssi" class="pill" style="font-size:11px;background:#21262d;color:#8b949e" title="Рівень сигналу Wi-Fi">📶 ...</span></h1>
   <div class="controls">
     <button id="modebtn" class="btn-mode passive" onclick="toggleMode()">👂 Режим: Пасивний (Sniffer)</button>
     <button class="btn-rescan" onclick="triggerRescan()">🔄 Пересканувати всі 16</button>
@@ -666,7 +666,7 @@ const ALARM_HELP_DB = {
     title: "Низька ємність / Standby Latch (Low Capacity)",
     level: "ok",
     levelName: "Інформаційний стан",
-    desc: "Заводський прапорець Vision BMS (біт 0x1000). Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
+    desc: "Заводський прапорець стану BMS. Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
     action: "Це нормальний штатний стан після закінчення заряду. Прапорець знімається автоматично під час першого ж розряду струмом від 1-2 А."
   },
   "Low capacity": {
@@ -674,7 +674,7 @@ const ALARM_HELP_DB = {
     title: "Низька ємність / Standby Latch (Low capacity)",
     level: "ok",
     levelName: "Інформаційний стан",
-    desc: "Заводський прапорець Vision BMS (біт 0x1000). Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
+    desc: "Заводський прапорець стану BMS. Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
     action: "Це нормальний штатний стан після закінчення заряду. Прапорець знімається автоматично під час першого ж розряду струмом від 1-2 А."
   },
   "Low Capacity": {
@@ -682,7 +682,7 @@ const ALARM_HELP_DB = {
     title: "Низька ємність / Standby Latch (Low Capacity)",
     level: "ok",
     levelName: "Інформаційний стан",
-    desc: "Заводський прапорець Vision BMS (біт 0x1000). Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
+    desc: "Заводський прапорець стану BMS. Встановлюється в парі з переходом у Standby, коли струм зарядки падає до нуля і батарея виходить на верхню полицю напруги, або при вичерпанні залишку ємності.",
     action: "Це нормальний штатний стан після закінчення заряду. Прапорець знімається автоматично під час першого ж розряду струмом від 1-2 А."
   },
   "Float stop": {
@@ -1380,7 +1380,7 @@ function openReport() {
   const packs = d.packs || {};
   const addrs = Object.keys(packs).sort();
 
-  let html = `<h2>Паспорт-звіт діагностики стану системи АКБ Vision</h2>
+  let html = `<h2>Паспорт-звіт діагностики стану системи АКБ Huawei ESM</h2>
   <div style="color:#666;font-size:12px;margin-bottom:14px">Дата формування: ${d.ts || new Date().toLocaleString()} · Порт: ${d.port}</div>
 
   <div class="rep-sec">1. Загальний енергетичний статус системи АКБ</div>
@@ -1562,7 +1562,7 @@ function closeInverterModal() {
 }
 
 function copyInverterSettings(packs, cells, bulk, floatV, cutoff, iOpt, iMax, iDis) {
-  const text = `=== Налаштування інвертора для Vision BMS (${packs}x АКБ, ${cells}S LiFePO4) ===\n` +
+  const text = `=== Налаштування інвертора для Huawei ESM (${packs}x АКБ, ${cells}S LiFePO4) ===\n` +
     `Bulk / Absorption: ${bulk} V\n` +
     `Float: ${floatV} V\n` +
     `Low Battery Cut-off: ${cutoff} V\n` +
