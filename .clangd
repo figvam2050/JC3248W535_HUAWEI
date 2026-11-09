@@ -3,11 +3,15 @@ CompileFlags:
   Add:
     - -Wno-unknown-warning-option
     - -Wno-unused-command-line-argument
+    - -ferror-limit=0
   Remove:
     - -mlongcalls
     - -fstrict-volatile-bitfields
     - -fno-tree-switch-conversion
     - -mfix-esp32-psram-cache-issue
+    - --driver-mode=*
 Diagnostics:
   Suppress:
     - "*"
+    - fatal_too_many_errors
+    - drv_unknown_argument
