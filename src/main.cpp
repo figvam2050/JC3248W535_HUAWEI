@@ -323,7 +323,11 @@ struct PackUI {
 static PackUI g_pack_ui[MAX_BATTERIES];
 
 static void set_backlight_brightness(uint8_t brightness) {
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcWrite(LCD_BL, brightness);
+#else
     ledcWrite(LCD_BL_PWM_CHANNEL, brightness);
+#endif
 }
 
 static String decodeAlarmString(const BatteryPack &p) {
@@ -2486,8 +2490,12 @@ void setup() {
 
     dataMutex = xSemaphoreCreateMutex();
 
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcAttach(LCD_BL, LCD_BL_PWM_FREQ, LCD_BL_PWM_RES);
+#else
     ledcSetup(LCD_BL_PWM_CHANNEL, LCD_BL_PWM_FREQ, LCD_BL_PWM_RES);
     ledcAttachPin(LCD_BL, LCD_BL_PWM_CHANNEL);
+#endif
     set_backlight_brightness(BRIGHTNESS_HIGH);
     s_last_touch_time = millis();
 

@@ -72,10 +72,11 @@ void WebGateway::begin(BatteryPack* packs, SemaphoreHandle_t mutex) {
 void WebGateway::tryConnectSTA() {
     _apMode = false;
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
     WiFi.begin(_ssid.c_str(), _pass.c_str());
 
     uint32_t startMs = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startMs < 8000) {
+    while (WiFi.status() != WL_CONNECTED && millis() - startMs < 20000) {
         delay(200);
         Serial.print(".");
     }
@@ -87,7 +88,7 @@ void WebGateway::tryConnectSTA() {
         configTzTime("EET-2EEST,M3.5.0/3,M10.5.0/4", "pool.ntp.org", "time.google.com", "time.cloudflare.com");
         Serial.println("[NTP] SNTP client started for Europe/Kyiv");
     } else {
-        Serial.println("[Wi-Fi] Failed to connect to saved network. Fallback to AP Mode!");
+        Serial.printf("[Wi-Fi] Failed to connect (status=%d). Fallback to AP Mode!\n", static_cast<int>(WiFi.status()));
         startAP();
     }
 }
@@ -148,8 +149,12 @@ void WebGateway::loop() {
 }
 
 void WebGateway::setupRoutes() {
-    // Serve exact GZIP-compressed COMBOX dashboard
+    // Serve setup page in AP mode, or exact GZIP dashboard in STA mode
     _server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (Gateway.isAPMode()) {
+            request->send(200, "text/html; charset=utf-8", WIFI_HTML);
+            return;
+        }
         AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html; charset=utf-8", INDEX_HTML_GZ, INDEX_HTML_GZ_LEN);
         response->addHeader("Content-Encoding", "gzip");
         request->send(response);
