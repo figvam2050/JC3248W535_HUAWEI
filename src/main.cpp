@@ -2140,15 +2140,11 @@ static void update_ui() {
         if (lbl_top_power_src) lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
         if (top_bat_bolt) lv_obj_add_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
 
-        uint32_t bat_clr = 0x22C55E; // Vivid Green
-        if (s_disp_bat.percentage <= 15) {
-            bat_clr = CLR_ROSE;
-        } else if (s_disp_bat.percentage <= 35) {
-            bat_clr = CLR_AMBER;
-        } else if (s_disp_bat.percentage <= 60) {
-            bat_clr = CLR_CYAN;
-        } else {
-            bat_clr = 0x22C55E; // Vivid Green
+        uint32_t bat_clr = 0x22C55E; // Vivid Green (>= 50%)
+        if (s_disp_bat.percentage < 30) {
+            bat_clr = CLR_ROSE;      // Red (< 30%)
+        } else if (s_disp_bat.percentage < 50) {
+            bat_clr = 0xFACC15;      // Yellow (< 50%)
         }
 
         if (top_bat_box) {
@@ -2475,22 +2471,23 @@ static void update_ui() {
             } else {
                 // Accurate 5-level battery symbol based on percentage
                 const char *s_icon = LV_SYMBOL_BATTERY_FULL;
-                uint32_t clr = CLR_EMERALD;
+                uint32_t clr = 0x22C55E; // Vivid Green (>= 50%)
+                if (s_disp_bat.percentage < 30) {
+                    clr = CLR_ROSE;      // Red (< 30%)
+                } else if (s_disp_bat.percentage < 50) {
+                    clr = 0xFACC15;      // Yellow (< 50%)
+                }
+
                 if (s_disp_bat.percentage <= 15) {
                     s_icon = LV_SYMBOL_BATTERY_EMPTY;
-                    clr = CLR_ROSE;
                 } else if (s_disp_bat.percentage <= 35) {
                     s_icon = LV_SYMBOL_BATTERY_1;
-                    clr = CLR_AMBER;
                 } else if (s_disp_bat.percentage <= 65) {
                     s_icon = LV_SYMBOL_BATTERY_2;
-                    clr = CLR_CYAN;
                 } else if (s_disp_bat.percentage <= 85) {
                     s_icon = LV_SYMBOL_BATTERY_3;
-                    clr = CLR_EMERALD;
                 } else {
                     s_icon = LV_SYMBOL_BATTERY_FULL;
-                    clr = CLR_EMERALD;
                 }
                 snprintf(batDispBuf, sizeof(batDispBuf), "%s %d%% (%.2fV)", s_icon, s_disp_bat.percentage, s_disp_bat.voltage);
                 lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(clr), 0);
