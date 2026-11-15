@@ -2703,7 +2703,7 @@ static void update_ui() {
                 lv_obj_set_style_bg_color(ui.cell_bars[c], lv_color_hex(CLR_PURPLE), LV_PART_INDICATOR);
             } else if (mv == p.cellMax && p.cellMax > p.cellMin) {
                 char numStr[12];
-                snprintf(numStr, sizeof(numStr), "C%02d MAX", c + 1);
+                snprintf(numStr, sizeof(numStr), "C%02d MX", c + 1);
                 lv_label_set_text(ui.lbl_cell_num[c], numStr);
                 lv_obj_set_style_text_color(ui.lbl_cell_num[c], lv_color_hex(CLR_EMERALD), 0);
                 lv_obj_set_style_bg_color(ui.cell_boxes[c], lv_color_hex(0x064E3B), 0);
@@ -2712,7 +2712,7 @@ static void update_ui() {
                 lv_obj_set_style_bg_color(ui.cell_bars[c], lv_color_hex(CLR_EMERALD), LV_PART_INDICATOR);
             } else if (mv == p.cellMin && p.cellMax > p.cellMin) {
                 char numStr[12];
-                snprintf(numStr, sizeof(numStr), "C%02d MIN", c + 1);
+                snprintf(numStr, sizeof(numStr), "C%02d MN", c + 1);
                 lv_label_set_text(ui.lbl_cell_num[c], numStr);
                 lv_obj_set_style_text_color(ui.lbl_cell_num[c], lv_color_hex(CLR_ROSE), 0);
                 lv_obj_set_style_bg_color(ui.cell_boxes[c], lv_color_hex(0x4C0519), 0);
