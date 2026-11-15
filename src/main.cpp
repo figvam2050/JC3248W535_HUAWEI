@@ -1292,6 +1292,102 @@ static void create_logs_tab() {
     refresh_logs_ui();
 }
 
+static lv_obj_t *info_modal = NULL;
+static lv_obj_t *lbl_info_pack[2] = {NULL, NULL};
+
+static void close_battery_info_cb(lv_event_t *e) {
+    if (info_modal) lv_obj_add_flag(info_modal, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void open_battery_info_cb(lv_event_t *e) {
+    if (!info_modal) {
+        info_modal = lv_obj_create(lv_scr_act());
+        lv_obj_set_size(info_modal, 320, 480);
+        lv_obj_align(info_modal, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_bg_color(info_modal, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(info_modal, LV_OPA_80, 0);
+        lv_obj_set_style_border_width(info_modal, 0, 0);
+        lv_obj_set_style_radius(info_modal, 0, 0);
+        lv_obj_clear_flag(info_modal, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_event_cb(info_modal, close_battery_info_cb, LV_EVENT_CLICKED, NULL);
+
+        lv_obj_t *card = lv_obj_create(info_modal);
+        lv_obj_set_size(card, 300, 390);
+        lv_obj_align(card, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_bg_color(card, lv_color_hex(CLR_DARK_BG), 0);
+        lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_color(card, lv_color_hex(CLR_CYAN), 0);
+        lv_obj_set_style_border_width(card, 1, 0);
+        lv_obj_set_style_radius(card, 12, 0);
+        lv_obj_set_style_pad_all(card, 10, 0);
+        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t *title = lv_label_create(card);
+        lv_label_set_text(title, LV_SYMBOL_LIST " BATTERY SYSTEM INFO");
+        lv_obj_set_style_text_color(title, lv_color_hex(CLR_CYAN), 0);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_12, 0);
+        lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 2);
+
+        lv_obj_t *btn_close = lv_btn_create(card);
+        lv_obj_set_size(btn_close, 28, 24);
+        lv_obj_align(btn_close, LV_ALIGN_TOP_RIGHT, 0, -2);
+        lv_obj_set_style_bg_color(btn_close, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_color(btn_close, lv_color_hex(CLR_ROSE), 0);
+        lv_obj_set_style_border_width(btn_close, 1, 0);
+        lv_obj_set_style_radius(btn_close, 6, 0);
+        lv_obj_add_event_cb(btn_close, close_battery_info_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *lbl_x = lv_label_create(btn_close);
+        lv_label_set_text(lbl_x, LV_SYMBOL_CLOSE);
+        lv_obj_set_style_text_color(lbl_x, lv_color_hex(CLR_ROSE), 0);
+        lv_obj_set_style_text_font(lbl_x, &lv_font_montserrat_10, 0);
+        lv_obj_center(lbl_x);
+
+        for (int i = 0; i < 2; i++) {
+            lv_obj_t *p_box = lv_obj_create(card);
+            lv_obj_set_size(p_box, 276, 158);
+            lv_obj_align(p_box, LV_ALIGN_TOP_MID, 0, 32 + i * 168);
+            lv_obj_set_style_bg_color(p_box, lv_color_hex(0x0F172A), 0);
+            lv_obj_set_style_border_color(p_box, lv_color_hex(0x334155), 0);
+            lv_obj_set_style_border_width(p_box, 1, 0);
+            lv_obj_set_style_radius(p_box, 8, 0);
+            lv_obj_set_style_pad_all(p_box, 8, 0);
+            lv_obj_clear_flag(p_box, LV_OBJ_FLAG_SCROLLABLE);
+
+            lbl_info_pack[i] = lv_label_create(p_box);
+            lv_obj_set_width(lbl_info_pack[i], 258);
+            lv_obj_set_style_text_color(lbl_info_pack[i], lv_color_white(), 0);
+            lv_obj_set_style_text_font(lbl_info_pack[i], &lv_font_montserrat_12, 0);
+            lv_obj_align(lbl_info_pack[i], LV_ALIGN_TOP_LEFT, 0, 0);
+        }
+    }
+
+    for (int i = 0; i < 2; i++) {
+        BatteryPack p;
+        if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+            p = g_packs[i];
+            xSemaphoreGive(dataMutex);
+        }
+        char buf[256];
+        const char *mfr = p.isHuawei ? "Huawei ESM-48100B1" : "Generic 15S LFP";
+        const char *ser = p.isHuawei ? "HW-ESM-48100" : "N/A";
+        snprintf(buf, sizeof(buf),
+                 "PACK #%d  [%s]\n"
+                 "Model: %s\n"
+                 "Type: LiFePO4 15S (48V)\n"
+                 "Serial: %s\n"
+                 "SOH: %u%%  |  Cap: %u Ah  |  Cyc: %lu\n"
+                 "V: %.2fV  |  I: %+.1fA  |  dV: %umV",
+                 i + 1, p.isOnline ? "ONLINE" : "OFFLINE",
+                 mfr, ser,
+                 p.soh, p.capacityRemaining, (unsigned long)p.cycles,
+                 p.voltage, p.current, p.cellDiff);
+        if (lbl_info_pack[i]) lv_label_set_text(lbl_info_pack[i], buf);
+    }
+
+    lv_obj_clear_flag(info_modal, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(info_modal);
+}
+
 static void build_ui() {
     lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(CLR_DARK_BG), 0);
 
@@ -1547,6 +1643,23 @@ static void build_ui() {
     lv_obj_set_style_text_color(lbl_mode_pill, lv_color_hex(CLR_CYAN), 0);
     lv_obj_set_style_text_font(lbl_mode_pill, &lv_font_montserrat_10, 0);
     lv_obj_align(lbl_mode_pill, LV_ALIGN_TOP_RIGHT, -4, 0);
+
+    // Info button in top-center gap of gauge_card
+    lv_obj_t *btn_pack_info = lv_btn_create(gauge_card);
+    lv_obj_set_size(btn_pack_info, 48, 22);
+    lv_obj_align(btn_pack_info, LV_ALIGN_TOP_MID, -8, 2);
+    lv_obj_set_style_bg_color(btn_pack_info, lv_color_hex(0x0F172A), 0);
+    lv_obj_set_style_bg_opa(btn_pack_info, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(btn_pack_info, lv_color_hex(CLR_CYAN), 0);
+    lv_obj_set_style_border_width(btn_pack_info, 1, 0);
+    lv_obj_set_style_radius(btn_pack_info, 11, 0);
+    lv_obj_set_style_shadow_width(btn_pack_info, 0, 0);
+    lv_obj_add_event_cb(btn_pack_info, open_battery_info_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *lbl_info_btn = lv_label_create(btn_pack_info);
+    lv_label_set_text(lbl_info_btn, "INFO");
+    lv_obj_set_style_text_color(lbl_info_btn, lv_color_hex(CLR_CYAN), 0);
+    lv_obj_set_style_text_font(lbl_info_btn, &lv_font_montserrat_10, 0);
+    lv_obj_center(lbl_info_btn);
 
     lv_obj_t *lbl_pwr_title = lv_label_create(gauge_card);
     lv_label_set_text(lbl_pwr_title, "ACTIVE POWER");
