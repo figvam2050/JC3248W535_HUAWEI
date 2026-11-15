@@ -1436,12 +1436,12 @@ static void build_ui() {
         lv_obj_clear_flag(wifi_bar_obj[b], LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     }
 
-    // IP Address - font 12px, shifted left to -76
+    // IP Address - font 12px, shifted left to -82
     lbl_top_ip = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_ip, "...");
     lv_obj_set_style_text_color(lbl_top_ip, lv_color_hex(CLR_CYAN), 0);
     lv_obj_set_style_text_font(lbl_top_ip, &lv_font_montserrat_12, 0);
-    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -76, 0);
+    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -82, 0);
 
     // Create TabView with tab_size = 0 (completely disables default button matrix header!)
     tabview = lv_tabview_create(lv_scr_act(), LV_DIR_TOP, 0);
