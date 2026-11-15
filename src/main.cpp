@@ -292,6 +292,10 @@ static lv_obj_t *lbl_bank_log = NULL;
 // Top Header Widgets (Fixed on top of screen)
 static lv_obj_t *lbl_top_power_src = NULL;
 static lv_obj_t *lbl_top_bat_pct = NULL;
+static lv_obj_t *top_bat_box = NULL;
+static lv_obj_t *top_bat_fill = NULL;
+static lv_obj_t *top_bat_tip = NULL;
+static lv_obj_t *top_bat_bolt = NULL;
 static lv_obj_t *lbl_top_ip = NULL;
 static lv_obj_t *wifi_bar_obj[4] = {NULL, NULL, NULL, NULL};
 
@@ -1367,12 +1371,52 @@ static void build_ui() {
     lv_obj_set_style_text_font(lbl_top_bat_pct, &lv_font_montserrat_10, 0);
     lv_obj_align(lbl_top_bat_pct, LV_ALIGN_RIGHT_MID, -2, 0);
 
-    // Next to percentage: Battery symbol / USB icon
+    // Custom Graphical Battery Shell (Vector Rounded Box + Positive Terminal Tip)
+    top_bat_box = lv_obj_create(top_nav_bar);
+    lv_obj_set_size(top_bat_box, 20, 11);
+    lv_obj_align(top_bat_box, LV_ALIGN_RIGHT_MID, -34, 0);
+    lv_obj_set_style_bg_opa(top_bat_box, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_color(top_bat_box, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_border_width(top_bat_box, 1, 0);
+    lv_obj_set_style_radius(top_bat_box, 3, 0);
+    lv_obj_set_style_pad_all(top_bat_box, 1, 0);
+    lv_obj_clear_flag(top_bat_box, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    // Battery Positive Anode Nipple (at right side of the battery body)
+    top_bat_tip = lv_obj_create(top_nav_bar);
+    lv_obj_set_size(top_bat_tip, 2, 5);
+    lv_obj_align(top_bat_tip, LV_ALIGN_RIGHT_MID, -32, 0);
+    lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_bg_opa(top_bat_tip, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(top_bat_tip, 0, 0);
+    lv_obj_set_style_radius(top_bat_tip, 1, 0);
+    lv_obj_clear_flag(top_bat_tip, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    // Battery Inner Dynamic Fill Level Bar
+    top_bat_fill = lv_obj_create(top_bat_box);
+    lv_obj_set_size(top_bat_fill, 16, 7);
+    lv_obj_set_pos(top_bat_fill, 0, 0);
+    lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_bg_opa(top_bat_fill, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(top_bat_fill, 0, 0);
+    lv_obj_set_style_radius(top_bat_fill, 1, 0);
+    lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    // Charging Lightning Bolt Icon inside battery
+    top_bat_bolt = lv_label_create(top_bat_box);
+    lv_label_set_text(top_bat_bolt, LV_SYMBOL_CHARGE);
+    lv_obj_set_style_text_color(top_bat_bolt, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_text_font(top_bat_bolt, &lv_font_montserrat_10, 0);
+    lv_obj_align(top_bat_bolt, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
+
+    // Dedicated USB Icon (shown when running USB only without battery)
     lbl_top_power_src = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
     lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
     lv_obj_set_style_text_font(lbl_top_power_src, &lv_font_montserrat_12, 0);
-    lv_obj_align(lbl_top_power_src, LV_ALIGN_RIGHT_MID, -30, 0);
+    lv_obj_align(lbl_top_power_src, LV_ALIGN_RIGHT_MID, -4, 0);
+    lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
 
     // Dynamic Wi-Fi Signal Antenna (4 vertical bars) - placed to the left of battery
     static const uint8_t bar_heights[4] = {3, 6, 9, 12};
@@ -2048,55 +2092,82 @@ static void update_ui() {
 
     if (!s_disp_bat.hasBattery) {
         // Mode 1: USB powered only, no battery connected to BAT connector
-        lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
-        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
-        lv_label_set_text(lbl_top_bat_pct, "");
+        if (top_bat_box) lv_obj_add_flag(top_bat_box, LV_OBJ_FLAG_HIDDEN);
+        if (top_bat_tip) lv_obj_add_flag(top_bat_tip, LV_OBJ_FLAG_HIDDEN);
+        if (lbl_top_power_src) {
+            lv_obj_clear_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
+            lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
+        }
+        if (lbl_top_bat_pct) lv_label_set_text(lbl_top_bat_pct, "");
     } else if (s_disp_bat.isCharging) {
         // Mode 3: USB + Battery connected (Charging)
-        // Animate battery icon during charging
-        const char *anim_icons[] = {
-            LV_SYMBOL_BATTERY_EMPTY,
-            LV_SYMBOL_BATTERY_1,
-            LV_SYMBOL_BATTERY_2,
-            LV_SYMBOL_BATTERY_FULL
-        };
-        lv_label_set_text(lbl_top_power_src, anim_icons[s_charge_anim_tick]);
-        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_AMBER), 0);
+        if (lbl_top_power_src) lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
+        if (top_bat_box) {
+            lv_obj_clear_flag(top_bat_box, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_border_color(top_bat_box, lv_color_hex(CLR_AMBER), 0);
+        }
+        if (top_bat_tip) {
+            lv_obj_clear_flag(top_bat_tip, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(CLR_AMBER), 0);
+        }
+        if (top_bat_fill) {
+            lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(CLR_AMBER), 0);
+            // Wave animation fill during charge
+            int anim_w = 4 + (s_charge_anim_tick * 4); // 4, 8, 12, 16 px
+            lv_obj_set_width(top_bat_fill, anim_w);
+        }
+        if (top_bat_bolt) {
+            lv_obj_clear_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_text_color(top_bat_bolt, lv_color_hex(0x000000), 0);
+        }
         
         char pctBuf[12];
         snprintf(pctBuf, sizeof(pctBuf), "%d%%", s_disp_bat.percentage);
-        lv_label_set_text(lbl_top_bat_pct, pctBuf);
-        lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(CLR_AMBER), 0);
+        if (lbl_top_bat_pct) {
+            lv_label_set_text(lbl_top_bat_pct, pctBuf);
+            lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(CLR_AMBER), 0);
+        }
     } else {
         // Mode 2: USB disconnected, running purely on Battery (BAT)
-        // Choose icon according to battery percentage
-        const char *bat_sym = LV_SYMBOL_BATTERY_FULL;
-        uint32_t bat_clr = CLR_EMERALD;
+        if (lbl_top_power_src) lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
+        if (top_bat_bolt) lv_obj_add_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
 
+        uint32_t bat_clr = CLR_EMERALD;
         if (s_disp_bat.percentage <= 15) {
-            bat_sym = LV_SYMBOL_BATTERY_EMPTY;
             bat_clr = CLR_ROSE;
-        } else if (s_disp_bat.percentage <= 40) {
-            bat_sym = LV_SYMBOL_BATTERY_1;
+        } else if (s_disp_bat.percentage <= 35) {
             bat_clr = CLR_AMBER;
-        } else if (s_disp_bat.percentage <= 70) {
-            bat_sym = LV_SYMBOL_BATTERY_2;
+        } else if (s_disp_bat.percentage <= 65) {
             bat_clr = CLR_CYAN;
-        } else if (s_disp_bat.percentage <= 90) {
-            bat_sym = LV_SYMBOL_BATTERY_3;
-            bat_clr = CLR_EMERALD;
         } else {
-            bat_sym = LV_SYMBOL_BATTERY_FULL;
             bat_clr = CLR_EMERALD;
         }
 
-        lv_label_set_text(lbl_top_power_src, bat_sym);
-        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(bat_clr), 0);
+        if (top_bat_box) {
+            lv_obj_clear_flag(top_bat_box, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_border_color(top_bat_box, lv_color_hex(bat_clr), 0);
+        }
+        if (top_bat_tip) {
+            lv_obj_clear_flag(top_bat_tip, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(bat_clr), 0);
+        }
+        if (top_bat_fill) {
+            lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(bat_clr), 0);
+            // Proportional vector fill width (0..16 px inside 20px shell)
+            int fill_w = (s_disp_bat.percentage * 16) / 100;
+            if (fill_w < 2 && s_disp_bat.percentage > 0) fill_w = 2;
+            lv_obj_set_width(top_bat_fill, fill_w);
+        }
 
         char pctBuf[12];
         snprintf(pctBuf, sizeof(pctBuf), "%d%%", s_disp_bat.percentage);
-        lv_label_set_text(lbl_top_bat_pct, pctBuf);
-        lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(bat_clr), 0);
+        if (lbl_top_bat_pct) {
+            lv_label_set_text(lbl_top_bat_pct, pctBuf);
+            lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(bat_clr), 0);
+        }
     }
 
     if (alarms) {
@@ -2387,17 +2458,35 @@ static void update_ui() {
 
         // Update internal display battery on Screensaver
         if (lbl_ss_disp_bat) {
-            char batDispBuf[40];
+            char batDispBuf[48];
             if (!s_disp_bat.hasBattery) {
                 snprintf(batDispBuf, sizeof(batDispBuf), "%s USB POWER (5.0V)", LV_SYMBOL_USB);
                 lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(CLR_CYAN), 0);
             } else if (s_disp_bat.isCharging) {
-                snprintf(batDispBuf, sizeof(batDispBuf), "%s %d%% (%.2fV) CHG", LV_SYMBOL_CHARGE, s_disp_bat.percentage, s_disp_bat.voltage);
+                // Beautiful battery + charging lightning bolt during charge
+                snprintf(batDispBuf, sizeof(batDispBuf), "%s %s %d%% (%.2fV) CHG", LV_SYMBOL_CHARGE, LV_SYMBOL_BATTERY_FULL, s_disp_bat.percentage, s_disp_bat.voltage);
                 lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(CLR_AMBER), 0);
             } else {
-                const char *s_icon = (s_disp_bat.percentage <= 20) ? LV_SYMBOL_BATTERY_EMPTY : LV_SYMBOL_BATTERY_FULL;
+                // Accurate 5-level battery symbol based on percentage
+                const char *s_icon = LV_SYMBOL_BATTERY_FULL;
+                uint32_t clr = CLR_EMERALD;
+                if (s_disp_bat.percentage <= 15) {
+                    s_icon = LV_SYMBOL_BATTERY_EMPTY;
+                    clr = CLR_ROSE;
+                } else if (s_disp_bat.percentage <= 35) {
+                    s_icon = LV_SYMBOL_BATTERY_1;
+                    clr = CLR_AMBER;
+                } else if (s_disp_bat.percentage <= 65) {
+                    s_icon = LV_SYMBOL_BATTERY_2;
+                    clr = CLR_CYAN;
+                } else if (s_disp_bat.percentage <= 85) {
+                    s_icon = LV_SYMBOL_BATTERY_3;
+                    clr = CLR_EMERALD;
+                } else {
+                    s_icon = LV_SYMBOL_BATTERY_FULL;
+                    clr = CLR_EMERALD;
+                }
                 snprintf(batDispBuf, sizeof(batDispBuf), "%s %d%% (%.2fV)", s_icon, s_disp_bat.percentage, s_disp_bat.voltage);
-                uint32_t clr = (s_disp_bat.percentage <= 20) ? CLR_ROSE : CLR_EMERALD;
                 lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(clr), 0);
             }
             lv_label_set_text(lbl_ss_disp_bat, batDispBuf);
