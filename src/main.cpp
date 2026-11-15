@@ -2857,25 +2857,29 @@ void loop() {
     }
 
     // Screensaver periodic floating/roaming, Matrix Rain streams & live time update
+    // Periodic 1-second clock update (top nav bar always + screensaver when active)
+    static uint32_t last_clock_tick = 0;
+    if (millis() - last_clock_tick >= 1000) {
+        last_clock_tick = millis();
+        time_t now = time(nullptr);
+        struct tm timeinfo;
+        char tBuf[16];
+        if (now > 1600000000 && localtime_r(&now, &timeinfo)) {
+            snprintf(tBuf, sizeof(tBuf), "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+        } else {
+            uint32_t sec = millis() / 1000;
+            uint32_t min = (sec / 60) % 60;
+            uint32_t hr = (sec / 3600) % 24;
+            snprintf(tBuf, sizeof(tBuf), "%02u:%02u", hr, min);
+        }
+        if (lbl_top_clock) lv_label_set_text(lbl_top_clock, tBuf);
+        if (s_is_screen_dimmed && lbl_ss_time) lv_label_set_text(lbl_ss_time, tBuf);
+    }
+
     if (s_is_screen_dimmed && s_sleep_mode >= SLEEP_MODE_SAVER && screensaver_overlay) {
         static uint32_t last_ss_tick = 0;
         if (millis() - last_ss_tick >= 1000) {
             last_ss_tick = millis();
-            
-            // Periodic 1-second top nav clock update
-            time_t now = time(nullptr);
-            struct tm timeinfo;
-            char tBuf[16];
-            if (now > 1600000000 && localtime_r(&now, &timeinfo)) {
-                snprintf(tBuf, sizeof(tBuf), "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-            } else {
-                uint32_t sec = millis() / 1000;
-                uint32_t min = (sec / 60) % 60;
-                uint32_t hr = (sec / 3600) % 24;
-                snprintf(tBuf, sizeof(tBuf), "%02u:%02u", hr, min);
-            }
-            if (lbl_top_clock) lv_label_set_text(lbl_top_clock, tBuf);
-            if (lbl_ss_time) lv_label_set_text(lbl_ss_time, tBuf);
 
             // Matrix Rain Stream dynamic update
             if (s_sleep_mode == SLEEP_MODE_MATRIX && ss_matrix_cluster) {
