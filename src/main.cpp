@@ -1371,32 +1371,32 @@ static void build_ui() {
     lv_obj_set_style_text_font(lbl_top_bat_pct, &lv_font_montserrat_10, 0);
     lv_obj_align(lbl_top_bat_pct, LV_ALIGN_RIGHT_MID, -2, 0);
 
-    // Custom Graphical Battery Shell (Vector Rounded Box + Positive Terminal Tip)
+    // Custom Vertical Graphical Battery Shell (10x15px + Top Terminal Tip)
     top_bat_box = lv_obj_create(top_nav_bar);
-    lv_obj_set_size(top_bat_box, 20, 11);
-    lv_obj_align(top_bat_box, LV_ALIGN_RIGHT_MID, -34, 0);
+    lv_obj_set_size(top_bat_box, 10, 15);
+    lv_obj_align(top_bat_box, LV_ALIGN_RIGHT_MID, -32, 1);
     lv_obj_set_style_bg_opa(top_bat_box, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_color(top_bat_box, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_border_color(top_bat_box, lv_color_hex(0x22C55E), 0);
     lv_obj_set_style_border_width(top_bat_box, 1, 0);
-    lv_obj_set_style_radius(top_bat_box, 3, 0);
+    lv_obj_set_style_radius(top_bat_box, 2, 0);
     lv_obj_set_style_pad_all(top_bat_box, 1, 0);
     lv_obj_clear_flag(top_bat_box, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    // Battery Positive Anode Nipple (at right side of the battery body)
+    // Battery Positive Anode Nipple (at TOP of the vertical battery body)
     top_bat_tip = lv_obj_create(top_nav_bar);
-    lv_obj_set_size(top_bat_tip, 2, 5);
-    lv_obj_align(top_bat_tip, LV_ALIGN_RIGHT_MID, -32, 0);
-    lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_size(top_bat_tip, 4, 2);
+    lv_obj_align(top_bat_tip, LV_ALIGN_RIGHT_MID, -35, -8);
+    lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(0x22C55E), 0);
     lv_obj_set_style_bg_opa(top_bat_tip, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(top_bat_tip, 0, 0);
     lv_obj_set_style_radius(top_bat_tip, 1, 0);
     lv_obj_clear_flag(top_bat_tip, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    // Battery Inner Dynamic Fill Level Bar
+    // Battery Inner Dynamic Fill Level Bar (grows from bottom to top)
     top_bat_fill = lv_obj_create(top_bat_box);
-    lv_obj_set_size(top_bat_fill, 16, 7);
-    lv_obj_set_pos(top_bat_fill, 0, 0);
-    lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_size(top_bat_fill, 6, 11);
+    lv_obj_align(top_bat_fill, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(0x22C55E), 0);
     lv_obj_set_style_bg_opa(top_bat_fill, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(top_bat_fill, 0, 0);
     lv_obj_set_style_radius(top_bat_fill, 1, 0);
@@ -1413,17 +1413,17 @@ static void build_ui() {
     // Dedicated USB Icon (shown when running USB only without battery)
     lbl_top_power_src = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
-    lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(0x22C55E), 0);
     lv_obj_set_style_text_font(lbl_top_power_src, &lv_font_montserrat_12, 0);
     lv_obj_align(lbl_top_power_src, LV_ALIGN_RIGHT_MID, -4, 0);
     lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
 
-    // Dynamic Wi-Fi Signal Antenna (4 vertical bars) - placed to the left of battery
+    // Dynamic Wi-Fi Signal Antenna (4 vertical bars) - shifted left to -66 for clean gap from battery
     static const uint8_t bar_heights[4] = {3, 6, 9, 12};
     for (int b = 0; b < 4; b++) {
         wifi_bar_obj[b] = lv_obj_create(top_nav_bar);
         lv_obj_set_size(wifi_bar_obj[b], 3, bar_heights[b]);
-        lv_obj_align(wifi_bar_obj[b], LV_ALIGN_BOTTOM_RIGHT, -64 + (b * 4), -8);
+        lv_obj_align(wifi_bar_obj[b], LV_ALIGN_BOTTOM_RIGHT, -66 + (b * 4), -8);
         lv_obj_set_style_bg_color(wifi_bar_obj[b], lv_color_hex(0x334155), 0);
         lv_obj_set_style_bg_opa(wifi_bar_obj[b], LV_OPA_COVER, 0);
         lv_obj_set_style_border_width(wifi_bar_obj[b], 0, 0);
@@ -1432,12 +1432,12 @@ static void build_ui() {
         lv_obj_clear_flag(wifi_bar_obj[b], LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     }
 
-    // IP Address - font 12px, moved left to -78 so all fits cleanly
+    // IP Address - font 12px, shifted left to -76
     lbl_top_ip = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_ip, "...");
     lv_obj_set_style_text_color(lbl_top_ip, lv_color_hex(CLR_CYAN), 0);
     lv_obj_set_style_text_font(lbl_top_ip, &lv_font_montserrat_12, 0);
-    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -78, 0);
+    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -76, 0);
 
     // Create TabView with tab_size = 0 (completely disables default button matrix header!)
     tabview = lv_tabview_create(lv_scr_act(), LV_DIR_TOP, 0);
@@ -2114,9 +2114,10 @@ static void update_ui() {
         if (top_bat_fill) {
             lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(CLR_AMBER), 0);
-            // Wave animation fill during charge
-            int anim_w = 4 + (s_charge_anim_tick * 4); // 4, 8, 12, 16 px
-            lv_obj_set_width(top_bat_fill, anim_w);
+            // Vertical wave animation fill during charge (3, 6, 9, 11 px height)
+            int anim_h = 2 + (s_charge_anim_tick * 3);
+            if (anim_h > 11) anim_h = 11;
+            lv_obj_set_size(top_bat_fill, 6, anim_h);
         }
         if (top_bat_bolt) {
             lv_obj_clear_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
@@ -2134,15 +2135,15 @@ static void update_ui() {
         if (lbl_top_power_src) lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
         if (top_bat_bolt) lv_obj_add_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
 
-        uint32_t bat_clr = CLR_EMERALD;
+        uint32_t bat_clr = 0x22C55E; // Vivid Green
         if (s_disp_bat.percentage <= 15) {
             bat_clr = CLR_ROSE;
         } else if (s_disp_bat.percentage <= 35) {
             bat_clr = CLR_AMBER;
-        } else if (s_disp_bat.percentage <= 65) {
+        } else if (s_disp_bat.percentage <= 60) {
             bat_clr = CLR_CYAN;
         } else {
-            bat_clr = CLR_EMERALD;
+            bat_clr = 0x22C55E; // Vivid Green
         }
 
         if (top_bat_box) {
@@ -2156,10 +2157,10 @@ static void update_ui() {
         if (top_bat_fill) {
             lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(bat_clr), 0);
-            // Proportional vector fill width (0..16 px inside 20px shell)
-            int fill_w = (s_disp_bat.percentage * 16) / 100;
-            if (fill_w < 2 && s_disp_bat.percentage > 0) fill_w = 2;
-            lv_obj_set_width(top_bat_fill, fill_w);
+            // Proportional vertical vector fill height (0..11 px inside 15px shell)
+            int fill_h = (s_disp_bat.percentage * 11) / 100;
+            if (fill_h < 2 && s_disp_bat.percentage > 0) fill_h = 2;
+            lv_obj_set_size(top_bat_fill, 6, fill_h);
         }
 
         char pctBuf[12];
