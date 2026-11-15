@@ -373,12 +373,12 @@ static void read_display_battery() {
         s_disp_bat.isUsbPowered = true;
         s_disp_bat.isCharging = false;
         s_disp_bat.percentage = 0;
-    } else if (s_disp_bat.voltage >= 4.22f) {
+    } else if (s_disp_bat.voltage >= 4.10f) {
         // USB plugged in and actively charging the battery
         s_disp_bat.hasBattery = true;
         s_disp_bat.isUsbPowered = true;
         s_disp_bat.isCharging = true;
-        s_disp_bat.percentage = 100;
+        s_disp_bat.percentage = 95;
     } else {
         // Running on battery ONLY (USB is disconnected)
         s_disp_bat.hasBattery = true;
