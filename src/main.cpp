@@ -35,6 +35,9 @@
 #define TOUCH_I2C_CLOCK  400000
 #define AXS_MAX_TOUCH    1
 
+// Battery Voltage ADC pin (Guition JC3248W535 onboard divider)
+#define BAT_ADC_PIN      5
+
 #define SCREEN_WIDTH  320
 #define SCREEN_HEIGHT 480
 
@@ -167,13 +170,14 @@ static lv_obj_t *dropdown_delta_thresh = NULL;
 static lv_obj_t *lbl_wifi_scan_res = NULL;
 static uint16_t s_alert_delta_thresh_mv = 50; // Default 50mV
 
-// Fullscreen Screensaver Overlay
+// Screensaver floating cluster container (can roam across the whole 320x480 screen!)
 static lv_obj_t *screensaver_overlay = NULL;
 static lv_obj_t *screensaver_cluster = NULL;
 static lv_obj_t *lbl_ss_time = NULL;
 static lv_obj_t *lbl_ss_soc = NULL;
 static lv_obj_t *lbl_ss_pwr = NULL;
 static lv_obj_t *lbl_ss_grid = NULL;
+static lv_obj_t *lbl_ss_disp_bat = NULL;
 
 // Energy Orb Screensaver Widgets
 static lv_obj_t *ss_orb_cluster = NULL;
@@ -287,8 +291,19 @@ static lv_obj_t *lbl_bank_log = NULL;
 
 // Top Header Widgets (Fixed on top of screen)
 static lv_obj_t *lbl_top_power_src = NULL;
+static lv_obj_t *lbl_top_bat_pct = NULL;
 static lv_obj_t *lbl_top_ip = NULL;
 static lv_obj_t *wifi_bar_obj[4] = {NULL, NULL, NULL, NULL};
+
+// Power State Structure for Screen internal battery
+struct DisplayBatteryState {
+    float voltage = 0.0f;
+    int percentage = 0;
+    bool hasBattery = false;
+    bool isUsbPowered = true;
+    bool isCharging = false;
+};
+static DisplayBatteryState s_disp_bat;
 
 // Dedicated Logs Tab Widgets
 static lv_obj_t *tab_logs = NULL;
@@ -321,6 +336,65 @@ struct PackUI {
     bool created;
 };
 static PackUI g_pack_ui[MAX_BATTERIES];
+
+static void read_display_battery() {
+    static float s_vbat_filtered = -1.0f;
+    static uint32_t s_last_read_ms = 0;
+    if (millis() - s_last_read_ms < 250 && s_vbat_filtered >= 0.0f) return;
+    s_last_read_ms = millis();
+
+    // Read ADC millivolts on GPIO 5
+    // Hardware divider on JC3248W535: 100k / 33k + 100k (or ~1.72 - 2.0x factor)
+    uint32_t mv_raw = analogReadMilliVolts(BAT_ADC_PIN);
+    float v_measured = (mv_raw * 2.0f) / 1000.0f;
+
+    if (s_vbat_filtered < 0.0f) {
+        s_vbat_filtered = v_measured;
+    } else {
+        s_vbat_filtered = 0.85f * s_vbat_filtered + 0.15f * v_measured;
+    }
+
+    s_disp_bat.voltage = s_vbat_filtered;
+
+    // Detect battery presence and power source
+    // Li-Ion 1S range: 3.3V (cut-off) to 4.2V (full)
+    // Floating pin or no battery with USB: typically reads near ~4.35V or < 2.5V
+    if (s_disp_bat.voltage < 2.6f) {
+        // No battery attached to BAT port
+        s_disp_bat.hasBattery = false;
+        s_disp_bat.isUsbPowered = true;
+        s_disp_bat.isCharging = false;
+        s_disp_bat.percentage = 0;
+    } else if (s_disp_bat.voltage > 4.22f) {
+        // USB attached and battery is being charged (on-board TP4056/charger pulls rail to ~4.25-4.35V)
+        s_disp_bat.hasBattery = true;
+        s_disp_bat.isUsbPowered = true;
+        s_disp_bat.isCharging = true;
+        s_disp_bat.percentage = 100;
+    } else {
+        // Battery present: 3.0V .. 4.20V
+        s_disp_bat.hasBattery = true;
+        
+        // Calculate SoC based on standard Li-Ion 1S curve
+        float pct = 0.0f;
+        if (s_disp_bat.voltage <= 3.40f) {
+            pct = 0.0f;
+        } else if (s_disp_bat.voltage <= 3.65f) {
+            pct = (s_disp_bat.voltage - 3.40f) / 0.25f * 20.0f; // 0..20%
+        } else if (s_disp_bat.voltage <= 3.90f) {
+            pct = 20.0f + (s_disp_bat.voltage - 3.65f) / 0.25f * 50.0f; // 20..70%
+        } else if (s_disp_bat.voltage <= 4.20f) {
+            pct = 70.0f + (s_disp_bat.voltage - 3.90f) / 0.30f * 30.0f; // 70..100%
+        } else {
+            pct = 100.0f;
+        }
+        s_disp_bat.percentage = (int)constrain(pct, 0.0f, 100.0f);
+
+        // When USB is unplugged, system runs purely on battery
+        s_disp_bat.isUsbPowered = false;
+        s_disp_bat.isCharging = false;
+    }
+}
 
 static void set_backlight_brightness(uint8_t brightness) {
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
@@ -1280,27 +1354,34 @@ static void build_ui() {
     lv_obj_set_style_text_font(lbl_nav_logs, &lv_font_montserrat_10, 0);
     lv_obj_align(lbl_nav_logs, LV_ALIGN_CENTER, 0, 0);
 
-    // Center: Real-time NTP Clock (e.g. "14:18") - font 14px, shifted right to 142
+    // Center-Left: Real-time NTP Clock (e.g. "14:18") - font 14px, moved left to 120
     lbl_top_clock = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_clock, "--:--");
     lv_obj_set_style_text_color(lbl_top_clock, lv_color_hex(CLR_EMERALD), 0);
     lv_obj_set_style_text_font(lbl_top_clock, &lv_font_montserrat_14, 0);
-    lv_obj_align(lbl_top_clock, LV_ALIGN_LEFT_MID, 142, 0);
+    lv_obj_align(lbl_top_clock, LV_ALIGN_LEFT_MID, 120, 0);
 
-    // Right Side: Power Source Icon (USB) - fixed position at far right
+    // Right Side: Power Source & Battery Indicator
+    // Rightmost: percentage text e.g. "100%" (or empty when USB-only)
+    lbl_top_bat_pct = lv_label_create(top_nav_bar);
+    lv_label_set_text(lbl_top_bat_pct, "");
+    lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_text_font(lbl_top_bat_pct, &lv_font_montserrat_10, 0);
+    lv_obj_align(lbl_top_bat_pct, LV_ALIGN_RIGHT_MID, -2, 0);
+
+    // Next to percentage: Battery symbol / USB icon
     lbl_top_power_src = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
     lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
     lv_obj_set_style_text_font(lbl_top_power_src, &lv_font_montserrat_12, 0);
-    lv_obj_align(lbl_top_power_src, LV_ALIGN_RIGHT_MID, -2, 0);
+    lv_obj_align(lbl_top_power_src, LV_ALIGN_RIGHT_MID, -30, 0);
 
-    // Right Side: Dynamic Wi-Fi Signal Antenna (4 vertical bars)
-    // Placed between IP and USB icon, with clear 6px spacing from USB
+    // Dynamic Wi-Fi Signal Antenna (4 vertical bars) - placed to the left of battery
     static const uint8_t bar_heights[4] = {3, 6, 9, 12};
     for (int b = 0; b < 4; b++) {
         wifi_bar_obj[b] = lv_obj_create(top_nav_bar);
         lv_obj_set_size(wifi_bar_obj[b], 3, bar_heights[b]);
-        lv_obj_align(wifi_bar_obj[b], LV_ALIGN_BOTTOM_RIGHT, -34 + (b * 4), -8);
+        lv_obj_align(wifi_bar_obj[b], LV_ALIGN_BOTTOM_RIGHT, -64 + (b * 4), -8);
         lv_obj_set_style_bg_color(wifi_bar_obj[b], lv_color_hex(0x334155), 0);
         lv_obj_set_style_bg_opa(wifi_bar_obj[b], LV_OPA_COVER, 0);
         lv_obj_set_style_border_width(wifi_bar_obj[b], 0, 0);
@@ -1309,12 +1390,12 @@ static void build_ui() {
         lv_obj_clear_flag(wifi_bar_obj[b], LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     }
 
-    // Right Side: IP Address - font 14px, shifted left to -50
+    // IP Address - font 12px, moved left to -78 so all fits cleanly
     lbl_top_ip = lv_label_create(top_nav_bar);
     lv_label_set_text(lbl_top_ip, "...");
     lv_obj_set_style_text_color(lbl_top_ip, lv_color_hex(CLR_CYAN), 0);
-    lv_obj_set_style_text_font(lbl_top_ip, &lv_font_montserrat_14, 0);
-    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -50, 0);
+    lv_obj_set_style_text_font(lbl_top_ip, &lv_font_montserrat_12, 0);
+    lv_obj_align(lbl_top_ip, LV_ALIGN_RIGHT_MID, -78, 0);
 
     // Create TabView with tab_size = 0 (completely disables default button matrix header!)
     tabview = lv_tabview_create(lv_scr_act(), LV_DIR_TOP, 0);
@@ -1704,8 +1785,8 @@ static void build_ui() {
 
     // Screensaver floating cluster container (can roam across the whole 320x480 screen!)
     screensaver_cluster = lv_obj_create(screensaver_overlay);
-    lv_obj_set_size(screensaver_cluster, 260, 200);
-    lv_obj_set_pos(screensaver_cluster, 30, 120);
+    lv_obj_set_size(screensaver_cluster, 260, 230);
+    lv_obj_set_pos(screensaver_cluster, 30, 110);
     lv_obj_set_style_bg_opa(screensaver_cluster, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(screensaver_cluster, 0, 0);
     lv_obj_set_style_pad_all(screensaver_cluster, 0, 0);
@@ -1739,6 +1820,13 @@ static void build_ui() {
     lv_obj_set_style_text_color(lbl_ss_grid, lv_color_hex(CLR_EMERALD), 0);
     lv_obj_set_style_text_font(lbl_ss_grid, &lv_font_montserrat_14, 0);
     lv_obj_align(lbl_ss_grid, LV_ALIGN_TOP_MID, 0, 134);
+
+    // Internal Display Battery Status Glance on Screensaver (14px font)
+    lbl_ss_disp_bat = lv_label_create(screensaver_cluster);
+    lv_label_set_text(lbl_ss_disp_bat, LV_SYMBOL_BATTERY_FULL " 100% (4.18V)");
+    lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(CLR_EMERALD), 0);
+    lv_obj_set_style_text_font(lbl_ss_disp_bat, &lv_font_montserrat_14, 0);
+    lv_obj_align(lbl_ss_disp_bat, LV_ALIGN_TOP_MID, 0, 162);
 
     // Energy Orb Screensaver Cluster (Alternative Style: 200x200)
     ss_orb_cluster = lv_obj_create(screensaver_overlay);
@@ -1949,8 +2037,69 @@ static void update_ui() {
         }
     }
 
-    // Power source indication (compact symbol only)
-    lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
+    // Read display battery status from ADC (GPIO 5)
+    read_display_battery();
+
+    // Power source & internal battery display logic
+    static uint8_t s_charge_anim_tick = 0;
+    static uint32_t s_last_anim_ms = 0;
+    if (millis() - s_last_anim_ms > 400) {
+        s_last_anim_ms = millis();
+        s_charge_anim_tick = (s_charge_anim_tick + 1) % 4;
+    }
+
+    if (!s_disp_bat.hasBattery) {
+        // Mode 1: USB powered only, no battery connected to BAT connector
+        lv_label_set_text(lbl_top_power_src, LV_SYMBOL_USB);
+        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_EMERALD), 0);
+        lv_label_set_text(lbl_top_bat_pct, "");
+    } else if (s_disp_bat.isCharging) {
+        // Mode 3: USB + Battery connected (Charging)
+        // Animate battery icon during charging
+        const char *anim_icons[] = {
+            LV_SYMBOL_BATTERY_EMPTY,
+            LV_SYMBOL_BATTERY_1,
+            LV_SYMBOL_BATTERY_2,
+            LV_SYMBOL_BATTERY_FULL
+        };
+        lv_label_set_text(lbl_top_power_src, anim_icons[s_charge_anim_tick]);
+        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(CLR_AMBER), 0);
+        
+        char pctBuf[12];
+        snprintf(pctBuf, sizeof(pctBuf), "%d%%", s_disp_bat.percentage);
+        lv_label_set_text(lbl_top_bat_pct, pctBuf);
+        lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(CLR_AMBER), 0);
+    } else {
+        // Mode 2: USB disconnected, running purely on Battery (BAT)
+        // Choose icon according to battery percentage
+        const char *bat_sym = LV_SYMBOL_BATTERY_FULL;
+        uint32_t bat_clr = CLR_EMERALD;
+
+        if (s_disp_bat.percentage <= 15) {
+            bat_sym = LV_SYMBOL_BATTERY_EMPTY;
+            bat_clr = CLR_ROSE;
+        } else if (s_disp_bat.percentage <= 40) {
+            bat_sym = LV_SYMBOL_BATTERY_1;
+            bat_clr = CLR_AMBER;
+        } else if (s_disp_bat.percentage <= 70) {
+            bat_sym = LV_SYMBOL_BATTERY_2;
+            bat_clr = CLR_CYAN;
+        } else if (s_disp_bat.percentage <= 90) {
+            bat_sym = LV_SYMBOL_BATTERY_3;
+            bat_clr = CLR_EMERALD;
+        } else {
+            bat_sym = LV_SYMBOL_BATTERY_FULL;
+            bat_clr = CLR_EMERALD;
+        }
+
+        lv_label_set_text(lbl_top_power_src, bat_sym);
+        lv_obj_set_style_text_color(lbl_top_power_src, lv_color_hex(bat_clr), 0);
+
+        char pctBuf[12];
+        snprintf(pctBuf, sizeof(pctBuf), "%d%%", s_disp_bat.percentage);
+        lv_label_set_text(lbl_top_bat_pct, pctBuf);
+        lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(bat_clr), 0);
+    }
 
     if (alarms) {
         lv_label_set_text(lbl_mode_pill, LV_SYMBOL_WARNING " ALARM");
@@ -2238,6 +2387,24 @@ static void update_ui() {
             lv_obj_set_style_text_color(lbl_ss_grid, lv_color_hex(CLR_ROSE), 0);
         }
 
+        // Update internal display battery on Screensaver
+        if (lbl_ss_disp_bat) {
+            char batDispBuf[40];
+            if (!s_disp_bat.hasBattery) {
+                snprintf(batDispBuf, sizeof(batDispBuf), "%s USB POWER (5.0V)", LV_SYMBOL_USB);
+                lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(CLR_CYAN), 0);
+            } else if (s_disp_bat.isCharging) {
+                snprintf(batDispBuf, sizeof(batDispBuf), "%s %d%% (%.2fV) CHG", LV_SYMBOL_CHARGE, s_disp_bat.percentage, s_disp_bat.voltage);
+                lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(CLR_AMBER), 0);
+            } else {
+                const char *s_icon = (s_disp_bat.percentage <= 20) ? LV_SYMBOL_BATTERY_EMPTY : LV_SYMBOL_BATTERY_FULL;
+                snprintf(batDispBuf, sizeof(batDispBuf), "%s %d%% (%.2fV)", s_icon, s_disp_bat.percentage, s_disp_bat.voltage);
+                uint32_t clr = (s_disp_bat.percentage <= 20) ? CLR_ROSE : CLR_EMERALD;
+                lv_obj_set_style_text_color(lbl_ss_disp_bat, lv_color_hex(clr), 0);
+            }
+            lv_label_set_text(lbl_ss_disp_bat, batDispBuf);
+        }
+
         // Update Energy Orb screensaver values
         if (arc_ss_orb && lbl_ss_orb_val && lbl_ss_orb_pwr) {
             lv_arc_set_value(arc_ss_orb, (int32_t)avgSoc);
@@ -2489,6 +2656,9 @@ void setup() {
     delay(500);
 
     dataMutex = xSemaphoreCreateMutex();
+
+    // Configure battery ADC on GPIO 5 (JC3248W535 onboard battery monitor)
+    analogSetPinAttenuation(BAT_ADC_PIN, ADC_11db);
 
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
     ledcAttach(LCD_BL, LCD_BL_PWM_FREQ, LCD_BL_PWM_RES);

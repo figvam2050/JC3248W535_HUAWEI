@@ -146,6 +146,7 @@ esptool.py --chip esp32s3 -p /dev/cu.usbmodem101 -b 921600 write_flash 0x0 backu
 | **GPIO 1** | LCD_BL (ШІМ підсвічування) | Частота 5 кГц, регулювання яскравості |
 | **GPIO 2** | I2S_WS (LRCK) | Аудіо синхронізація слів |
 | **GPIO 4** | TOUCH_SDA | Дані шини I2C тачскріну |
+| **GPIO 5** | BAT_ADC (ADC1_CH4) | Вбудований моніторинг напруги акумулятора плати (BAT) |
 | **GPIO 8** | TOUCH_SCL | Тактування шини I2C тачскріну |
 | **GPIO 11** | SD_CMD / TOUCH_INT | Команда MicroSD / Переривання тачскріну |
 | **GPIO 12** | SD_CLK / TOUCH_RST | Тактування MicroSD / Скидання тачскріну |
