@@ -344,17 +344,21 @@ static PackUI g_pack_ui[MAX_BATTERIES];
 static void read_display_battery() {
     static float s_vbat_filtered = -1.0f;
     static uint32_t s_last_read_ms = 0;
-    if (millis() - s_last_read_ms < 250 && s_vbat_filtered >= 0.0f) return;
+    if (millis() - s_last_read_ms < 500 && s_vbat_filtered >= 0.0f) return;
     s_last_read_ms = millis();
 
-    // Read ADC millivolts on GPIO 5 (JC3248W535 divider: 33k / 100k, empirical factor 1.68)
-    uint32_t mv_raw = analogReadMilliVolts(BAT_ADC_PIN);
-    float v_measured = (mv_raw * 1.68f) / 1000.0f;
+    // Multi-sample ADC averaging (16 samples) to eliminate Wi-Fi / Display PWM noise
+    uint32_t mv_sum = 0;
+    for (int i = 0; i < 16; i++) {
+        mv_sum += analogReadMilliVolts(BAT_ADC_PIN);
+    }
+    float v_measured = ((mv_sum / 16.0f) * 1.68f) / 1000.0f;
 
     if (s_vbat_filtered < 0.0f) {
         s_vbat_filtered = v_measured;
     } else {
-        s_vbat_filtered = 0.85f * s_vbat_filtered + 0.15f * v_measured;
+        // Strong smoothing filter (95% history + 5% new) so percentage never jumps
+        s_vbat_filtered = 0.95f * s_vbat_filtered + 0.05f * v_measured;
     }
 
     s_disp_bat.voltage = s_vbat_filtered;
