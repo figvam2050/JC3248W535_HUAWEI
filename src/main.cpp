@@ -343,10 +343,9 @@ static void read_display_battery() {
     if (millis() - s_last_read_ms < 250 && s_vbat_filtered >= 0.0f) return;
     s_last_read_ms = millis();
 
-    // Read ADC millivolts on GPIO 5
-    // Hardware divider on JC3248W535: 100k / 33k + 100k (or ~1.72 - 2.0x factor)
+    // Read ADC millivolts on GPIO 5 (JC3248W535 divider: 33k / 100k, empirical factor 1.68)
     uint32_t mv_raw = analogReadMilliVolts(BAT_ADC_PIN);
-    float v_measured = (mv_raw * 2.0f) / 1000.0f;
+    float v_measured = (mv_raw * 1.68f) / 1000.0f;
 
     if (s_vbat_filtered < 0.0f) {
         s_vbat_filtered = v_measured;
@@ -357,25 +356,28 @@ static void read_display_battery() {
     s_disp_bat.voltage = s_vbat_filtered;
 
     // Detect battery presence and power source
-    // Li-Ion 1S range: 3.3V (cut-off) to 4.2V (full)
-    // Floating pin or no battery with USB: typically reads near ~4.35V or < 2.5V
-    if (s_disp_bat.voltage < 2.6f) {
+    // Li-Ion 1S range: 3.3V (cut-off) to 4.20V (full)
+    // When USB is disconnected: voltage is on normal battery plateau (3.3V .. 4.15V)
+    // When USB is plugged in: internal TP4056 pulls voltage up to 4.22V - 4.35V
+    if (s_disp_bat.voltage < 2.5f) {
         // No battery attached to BAT port
         s_disp_bat.hasBattery = false;
         s_disp_bat.isUsbPowered = true;
         s_disp_bat.isCharging = false;
         s_disp_bat.percentage = 0;
-    } else if (s_disp_bat.voltage > 4.22f) {
-        // USB attached and battery is being charged (on-board TP4056/charger pulls rail to ~4.25-4.35V)
+    } else if (s_disp_bat.voltage >= 4.22f) {
+        // USB plugged in and actively charging the battery
         s_disp_bat.hasBattery = true;
         s_disp_bat.isUsbPowered = true;
         s_disp_bat.isCharging = true;
         s_disp_bat.percentage = 100;
     } else {
-        // Battery present: 3.0V .. 4.20V
+        // Running on battery ONLY (USB is disconnected)
         s_disp_bat.hasBattery = true;
-        
-        // Calculate SoC based on standard Li-Ion 1S curve
+        s_disp_bat.isUsbPowered = false;
+        s_disp_bat.isCharging = false;
+
+        // Calculate accurate SoC based on standard Li-Ion 1S curve
         float pct = 0.0f;
         if (s_disp_bat.voltage <= 3.40f) {
             pct = 0.0f;
@@ -383,16 +385,12 @@ static void read_display_battery() {
             pct = (s_disp_bat.voltage - 3.40f) / 0.25f * 20.0f; // 0..20%
         } else if (s_disp_bat.voltage <= 3.90f) {
             pct = 20.0f + (s_disp_bat.voltage - 3.65f) / 0.25f * 50.0f; // 20..70%
-        } else if (s_disp_bat.voltage <= 4.20f) {
-            pct = 70.0f + (s_disp_bat.voltage - 3.90f) / 0.30f * 30.0f; // 70..100%
+        } else if (s_disp_bat.voltage <= 4.15f) {
+            pct = 70.0f + (s_disp_bat.voltage - 3.90f) / 0.25f * 30.0f; // 70..100%
         } else {
             pct = 100.0f;
         }
         s_disp_bat.percentage = (int)constrain(pct, 0.0f, 100.0f);
-
-        // When USB is unplugged, system runs purely on battery
-        s_disp_bat.isUsbPowered = false;
-        s_disp_bat.isCharging = false;
     }
 }
 
