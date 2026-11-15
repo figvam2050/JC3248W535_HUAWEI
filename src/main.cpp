@@ -2106,33 +2106,34 @@ static void update_ui() {
         if (lbl_top_bat_pct) lv_label_set_text(lbl_top_bat_pct, "");
     } else if (s_disp_bat.isCharging) {
         // Mode 3: USB + Battery connected (Charging)
+        // Green battery shell & fill + bright yellow lightning bolt inside
         if (lbl_top_power_src) lv_obj_add_flag(lbl_top_power_src, LV_OBJ_FLAG_HIDDEN);
         if (top_bat_box) {
             lv_obj_clear_flag(top_bat_box, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_border_color(top_bat_box, lv_color_hex(CLR_AMBER), 0);
+            lv_obj_set_style_border_color(top_bat_box, lv_color_hex(0x22C55E), 0);
         }
         if (top_bat_tip) {
             lv_obj_clear_flag(top_bat_tip, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(CLR_AMBER), 0);
+            lv_obj_set_style_bg_color(top_bat_tip, lv_color_hex(0x22C55E), 0);
         }
         if (top_bat_fill) {
             lv_obj_clear_flag(top_bat_fill, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(CLR_AMBER), 0);
-            // Vertical wave animation fill during charge (3, 6, 9, 11 px height)
+            lv_obj_set_style_bg_color(top_bat_fill, lv_color_hex(0x22C55E), 0);
+            // Vertical wave animation fill during charge (2, 5, 8, 11 px height)
             int anim_h = 2 + (s_charge_anim_tick * 3);
             if (anim_h > 11) anim_h = 11;
             lv_obj_set_size(top_bat_fill, 6, anim_h);
         }
         if (top_bat_bolt) {
             lv_obj_clear_flag(top_bat_bolt, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_text_color(top_bat_bolt, lv_color_hex(0x000000), 0);
+            lv_obj_set_style_text_color(top_bat_bolt, lv_color_hex(0xFACC15), 0);
         }
         
         char pctBuf[12];
         snprintf(pctBuf, sizeof(pctBuf), "%d%%", s_disp_bat.percentage);
         if (lbl_top_bat_pct) {
             lv_label_set_text(lbl_top_bat_pct, pctBuf);
-            lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(CLR_AMBER), 0);
+            lv_obj_set_style_text_color(lbl_top_bat_pct, lv_color_hex(0x22C55E), 0);
         }
     } else {
         // Mode 2: USB disconnected, running purely on Battery (BAT)
