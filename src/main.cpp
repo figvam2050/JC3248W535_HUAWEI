@@ -1388,6 +1388,14 @@ static void open_battery_info_cb(lv_event_t *e) {
     lv_obj_move_foreground(info_modal);
 }
 
+static void deep_sleep_btn_cb(lv_event_t *e) {
+    set_backlight_brightness(0);
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(50);
+    esp_deep_sleep_start();
+}
+
 static void build_ui() {
     lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(CLR_DARK_BG), 0);
 
@@ -1571,6 +1579,23 @@ static void build_ui() {
     pack_strip_card = create_glass_card(tab_overview, 308, 48);
     lv_obj_align(pack_strip_card, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_pad_all(pack_strip_card, 2, 0);
+
+    // Leftmost compact Deep Sleep button (52x40) - wake via hardware RESET button
+    lv_obj_t *btn_deep_sleep = lv_btn_create(pack_strip_card);
+    lv_obj_set_size(btn_deep_sleep, 52, 40);
+    lv_obj_set_pos(btn_deep_sleep, 2, 2);
+    lv_obj_set_style_bg_color(btn_deep_sleep, lv_color_hex(0x2D0A16), 0);
+    lv_obj_set_style_border_color(btn_deep_sleep, lv_color_hex(CLR_ROSE), 0);
+    lv_obj_set_style_border_width(btn_deep_sleep, 1, 0);
+    lv_obj_set_style_radius(btn_deep_sleep, 8, 0);
+    lv_obj_set_style_pad_all(btn_deep_sleep, 2, 0);
+    lv_obj_add_event_cb(btn_deep_sleep, deep_sleep_btn_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *lbl_sleep = lv_label_create(btn_deep_sleep);
+    lv_label_set_text(lbl_sleep, LV_SYMBOL_POWER "\nOFF");
+    lv_obj_set_style_text_align(lbl_sleep, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(lbl_sleep, lv_color_hex(CLR_ROSE), 0);
+    lv_obj_set_style_text_font(lbl_sleep, &lv_font_montserrat_10, 0);
+    lv_obj_center(lbl_sleep);
 
     for (int i = 0; i < 4; i++) {
         pack_strip_btns[i] = lv_btn_create(pack_strip_card);
@@ -2632,11 +2657,11 @@ static void update_ui() {
     }
     if (onlinePacks == 0) onlinePacks = 1; // At least 1 slot reserved if offline
 
-    // Calculate dynamic button widths for perfect fit across 304px available inner width
-    int total_avail_w = 304;
+    // Calculate dynamic button widths for remaining 248px inner width (after 52px sleep btn + 4px gap)
+    int total_avail_w = 248;
     int gap = (onlinePacks > 1) ? 4 : 0;
     int btn_w = (total_avail_w - (onlinePacks - 1) * gap) / onlinePacks;
-    int cur_x = 2;
+    int cur_x = 58;
 
     for (int pIdx = 0; pIdx < 4; pIdx++) {
         if (pIdx < onlinePacks && local_packs[pIdx].isOnline) {
@@ -2674,7 +2699,7 @@ static void update_ui() {
             // When everything is offline, show P01 as waiting
             lv_obj_clear_flag(pack_strip_btns[pIdx], LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_size(pack_strip_btns[pIdx], total_avail_w, 40);
-            lv_obj_set_pos(pack_strip_btns[pIdx], 2, 2);
+            lv_obj_set_pos(pack_strip_btns[pIdx], 58, 2);
             lv_obj_set_size(pack_strip_bars[pIdx], total_avail_w - 10, 5);
             lv_label_set_text(pack_strip_lbls[pIdx], "WAITING FOR RS485 PACKS...");
             lv_bar_set_value(pack_strip_bars[pIdx], 0, LV_ANIM_OFF);
